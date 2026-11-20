@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ORG_CHART_STRUCTURE } from '../data/onboardingData';
 import { useOnboardingStore } from '../store/useOnboardingStore';
+import { buildOrgPhotoMap, resolvePersonPhoto } from '../utils/orgChartPhotos';
 
 const MIN_ZOOM = 0.65;
 const MAX_ZOOM = 1.25;
@@ -34,7 +35,16 @@ function NeutralPhotoPlaceholder({ photoUrl, name, tier, isHighlighted }) {
       <img
         src={photoUrl}
         alt={name}
-        className={`${sizeClasses} shrink-0 rounded-full border border-white/25 object-cover`}
+        loading="lazy"
+        className={[
+          sizeClasses,
+          'shrink-0 rounded-full border object-cover object-top transition-all duration-200',
+          isHighlighted
+            ? 'border-[#60A5FA] shadow-[0_0_16px_rgba(22,137,248,0.45)]'
+            : isExecutive
+            ? 'border-[#60A5FA]/50'
+            : 'border-white/25',
+        ].join(' ')}
       />
     );
   }
@@ -64,12 +74,14 @@ function NeutralPhotoPlaceholder({ photoUrl, name, tier, isHighlighted }) {
  */
 function OrgPositionCard({
   position,
+  photoMap,
   hoveredId,
   hoveredParentId,
   onHoverStart,
   onHoverEnd,
 }) {
   const { id, parentId, name, role, tier, photoUrl } = position;
+  const resolvedPhotoUrl = photoUrl || resolvePersonPhoto(photoMap, name);
   const isSelfHovered = hoveredId === id;
   const isParentOfHovered = hoveredParentId === id;
   const isHighlighted = isSelfHovered || isParentOfHovered;
@@ -116,9 +128,9 @@ function OrgPositionCard({
         <span className="pointer-events-none absolute inset-x-4 top-0 h-[2px] rounded-full bg-gradient-to-r from-transparent via-[#60A5FA] to-transparent" />
       )}
 
-      {/* 1. Photo Placeholder Slot */}
+      {/* 1. Photo Placeholder / Real Photo Slot */}
       <NeutralPhotoPlaceholder
-        photoUrl={photoUrl}
+        photoUrl={resolvedPhotoUrl}
         name={name}
         tier={tier}
         isHighlighted={isHighlighted}
@@ -158,6 +170,7 @@ function OrgPositionCard({
  */
 function FunctionalUnitColumn({
   unit,
+  photoMap,
   hoveredId,
   hoveredParentId,
   onHoverStart,
@@ -172,6 +185,7 @@ function FunctionalUnitColumn({
       {/* Unit Head Card */}
       <OrgPositionCard
         position={head}
+        photoMap={photoMap}
         hoveredId={hoveredId}
         hoveredParentId={hoveredParentId}
         onHoverStart={onHoverStart}
@@ -197,6 +211,7 @@ function FunctionalUnitColumn({
               <OrgPositionCard
                 key={member.id}
                 position={member}
+                photoMap={photoMap}
                 hoveredId={hoveredId}
                 hoveredParentId={hoveredParentId}
                 onHoverStart={onHoverStart}
@@ -216,6 +231,7 @@ function FunctionalUnitColumn({
  */
 function FunctionalBranchBlock({
   branch,
+  photoMap,
   hoveredId,
   hoveredParentId,
   onHoverStart,
@@ -241,6 +257,7 @@ function FunctionalBranchBlock({
       >
         <OrgPositionCard
           position={leader}
+          photoMap={photoMap}
           hoveredId={hoveredId}
           hoveredParentId={hoveredParentId}
           onHoverStart={onHoverStart}
@@ -291,6 +308,7 @@ function FunctionalBranchBlock({
           <FunctionalUnitColumn
             key={unit.head.id}
             unit={unit}
+            photoMap={photoMap}
             hoveredId={hoveredId}
             hoveredParentId={hoveredParentId}
             onHoverStart={onHoverStart}
@@ -405,6 +423,24 @@ export default function Stage2View({ onBackToPath }) {
   const { root, companyDivisions, functionalBranches } = ORG_CHART_STRUCTURE;
   const isRootForkHighlighted =
     hoveredId === root.id || hoveredParentId === root.id;
+
+  const photoMap = useMemo(() => {
+    const names = [
+      root.name,
+      companyDivisions.left.leader.name,
+      ...companyDivisions.left.team.map((m) => m.name),
+      companyDivisions.right.leader.name,
+      ...companyDivisions.right.team.map((m) => m.name),
+      ...functionalBranches.flatMap((b) => [
+        b.leader.name,
+        ...b.units.flatMap((u) => [
+          u.head.name,
+          ...u.members.map((m) => m.name),
+        ]),
+      ]),
+    ];
+    return buildOrgPhotoMap(names);
+  }, [root, companyDivisions, functionalBranches]);
 
   return (
     <div className="flex h-[calc(100dvh-4rem)] w-full flex-col justify-between overflow-hidden px-3 py-2.5 sm:px-6 sm:py-3.5">
@@ -532,6 +568,7 @@ export default function Stage2View({ onBackToPath }) {
               >
                 <OrgPositionCard
                   position={root}
+                  photoMap={photoMap}
                   hoveredId={hoveredId}
                   hoveredParentId={hoveredParentId}
                   onHoverStart={handleHoverStart}
@@ -601,6 +638,7 @@ export default function Stage2View({ onBackToPath }) {
                 >
                   <OrgPositionCard
                     position={companyDivisions.left.leader}
+                    photoMap={photoMap}
                     hoveredId={hoveredId}
                     hoveredParentId={hoveredParentId}
                     onHoverStart={handleHoverStart}
@@ -623,6 +661,7 @@ export default function Stage2View({ onBackToPath }) {
                     <OrgPositionCard
                       key={member.id}
                       position={member}
+                      photoMap={photoMap}
                       hoveredId={hoveredId}
                       hoveredParentId={hoveredParentId}
                       onHoverStart={handleHoverStart}
@@ -644,6 +683,7 @@ export default function Stage2View({ onBackToPath }) {
                 >
                   <OrgPositionCard
                     position={companyDivisions.right.leader}
+                    photoMap={photoMap}
                     hoveredId={hoveredId}
                     hoveredParentId={hoveredParentId}
                     onHoverStart={handleHoverStart}
@@ -676,6 +716,7 @@ export default function Stage2View({ onBackToPath }) {
                       <OrgPositionCard
                         key={member.id}
                         position={member}
+                        photoMap={photoMap}
                         hoveredId={hoveredId}
                         hoveredParentId={hoveredParentId}
                         onHoverStart={handleHoverStart}
@@ -742,6 +783,7 @@ export default function Stage2View({ onBackToPath }) {
                 <FunctionalBranchBlock
                   key={branch.id}
                   branch={branch}
+                  photoMap={photoMap}
                   hoveredId={hoveredId}
                   hoveredParentId={hoveredParentId}
                   onHoverStart={handleHoverStart}

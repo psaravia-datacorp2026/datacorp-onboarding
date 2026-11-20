@@ -1,0 +1,13 @@
+FOTOS DE ORGANIGRAMA DATACORP — IMÁGENES OPTIMIZADAS PARA WEB
+
+- Fotografías convertidas a WebP, calidad 84, 512 px máximo en el lado más largo.
+- Se conservaron los nombres originales (excepto la extensión) y las subcarpetas.
+- Se eliminan metadatos EXIF de los archivos WebP convertidos.
+- Los formatos originales HEIC, JPG, JPEG y PNG fueron normalizados a WebP.
+- Este material puede incluir personas que no figuran en el organigrama. No se deben publicar o asignar fotos por mera similitud de nombres.
+- Si dos nombres son ambiguos, deja el avatar original y confirma identidad manualmente.
+- El inventario_fotos.csv registra el origen de cada imagen y su ruta convertida.
+
+Para usar en React/Vite: copia la carpeta 'organigrama-fotos' íntegra dentro de src/assets/ del proyecto.
+Ejemplo: src/assets/organigrama-fotos/Clientes/Editadas/Rodolfo.webp
+No debes copiar los archivos HEIC originales.
