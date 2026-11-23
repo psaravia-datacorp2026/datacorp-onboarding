@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { PRESENTATION_SLIDES } from '../data/presentationSlides';
 import { useOnboardingStore } from '../store/useOnboardingStore';
 import PresentationViewer from './presentation/PresentationViewer';
@@ -21,10 +21,13 @@ export default function Stage3View({ onBackToPath }) {
       ? stage3SlideIndex
       : 0;
 
-  const visitedIds =
-    Array.isArray(stage3VisitedSlides) && stage3VisitedSlides.length > 0
-      ? stage3VisitedSlides
-      : [PRESENTATION_SLIDES[0].id];
+  const visitedIds = useMemo(
+    () =>
+      Array.isArray(stage3VisitedSlides) && stage3VisitedSlides.length > 0
+        ? stage3VisitedSlides
+        : [PRESENTATION_SLIDES[0].id],
+    [stage3VisitedSlides]
+  );
 
   useEffect(() => {
     const activeSlide = PRESENTATION_SLIDES[safeSlideIndex];
@@ -34,9 +37,13 @@ export default function Stage3View({ onBackToPath }) {
   }, [safeSlideIndex, visitedIds, setStage3Progress]);
 
   const handleSelectSlideIndex = (nextIndex) => {
-    const targetSlide = PRESENTATION_SLIDES[nextIndex];
+    const clampedIndex = Math.min(
+      Math.max(Number(nextIndex) || 0, 0),
+      totalSlides - 1
+    );
+    const targetSlide = PRESENTATION_SLIDES[clampedIndex];
     if (targetSlide) {
-      setStage3Progress(nextIndex, targetSlide.id);
+      setStage3Progress(clampedIndex, targetSlide.id);
     }
   };
 

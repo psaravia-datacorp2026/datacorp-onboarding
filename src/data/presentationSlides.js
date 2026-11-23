@@ -181,7 +181,7 @@ export const PRESENTATION_SLIDES = [
     rows: [
       {
         company: 'Datasur / Macroscope (DComex)',
-        territory: 'Latinoamérica (Chile y Colombia)',
+        territory: 'Latinoamérica (Perú, Chile, Colombia, México, Ecuador y Paraguay)',
         model: 'SaaS y Product-Led Growth',
         role: 'Adquisición, experiencia y caja base',
         accent: '#1689F8',
@@ -333,62 +333,83 @@ export const PRESENTATION_SLIDES = [
   {
     id: 9,
     number: '09',
-    section: 'Metas y OKR',
+    section: 'Prioridades Estratégicas',
     theme: 'pastel-editorial',
     layoutType: 'okr-ambitions',
-    eyebrow: 'METAS Y OKR ESTRATÉGICOS',
-    title: 'Ambiciones concretas por empresa',
-    disclaimer:
-      'Aclaración clave: Estas cifras son objetivos propuestos para evaluar con evidencia, no resultados ya conseguidos.',
+    eyebrow: 'FOCO ESTRATÉGICO POR EMPRESA',
+    title: 'Prioridades estratégicas de crecimiento',
+    subtitle:
+      'Cada empresa del ecosistema impulsa palancas complementarias respaldadas por la misma fábrica de datos y tecnología.',
     groups: [
       {
         company: 'DATASUR / MACROSCOPE',
+        focus: 'Experiencia y expansión LATAM',
         accent: '#E05D34',
-        metrics: [
-          { highlight: '+100%', label: 'tráfico orgánico SEO.' },
-          { highlight: '≥ 8%', label: 'conversión visitante a usuario.' },
-          { highlight: '−30%', label: 'costo de adquisición (CAC).' },
+        priorities: [
+          {
+            title: 'Evolución de DComex',
+            description:
+              'Mejorar la usabilidad, ampliar la cobertura en Latinoamérica e integrar módulos del Data Core.',
+          },
+          {
+            title: 'Adquisición liderada por producto',
+            description:
+              'Impulsar SaaS y Product-Led Growth junto con SEO orgánico, gremios y asesoría consultiva.',
+          },
+          {
+            title: 'Fidelización y recurrencia',
+            description:
+              'Fortalecer la experiencia de servicio y las renovaciones para sostener el flujo de caja base.',
+          },
         ],
       },
       {
         company: 'IMEXDBUSINESS',
+        focus: 'Comercialización internacional',
         accent: '#1689F8',
-        metrics: [
+        priorities: [
           {
-            highlight: '20%',
-            label: 'facturación vía Embedded Intelligence.',
+            title: 'Venta consultiva enterprise',
+            description:
+              'Consolidar contratos de alto valor en Asia y Europa orientados a clientes sofisticados.',
           },
           {
-            highlight: '> 10.000',
-            label: 'usuarios en plataformas distribuidas.',
+            title: 'Modelos de distribución global',
+            description:
+              'Desarrollar Bulk Data, plataformas White Label e inteligencia embebida en ecosistemas aliados.',
           },
           {
-            highlight: 'Liderazgo',
-            label: 'rentable en obtención de datos.',
+            title: 'Validación y fuentes globales',
+            description:
+              'Validar módulos avanzados en mercados exigentes y administrar fuentes internacionales.',
           },
         ],
       },
       {
         company: 'DATLAS / EXIM',
+        focus: 'Escalamiento por partners y EXIM',
         accent: '#14294D',
-        metrics: [
+        priorities: [
           {
-            highlight: '5 módulos',
-            label: 'validados internacionalmente.',
+            title: 'Integración mediante partners',
+            description:
+              'Escalar el modelo B2B2B integrando EXIM en cámaras, aliados tecnológicos, APIs y White Label.',
           },
           {
-            highlight: '> 250.000',
-            label: 'usuarios registrados globales.',
+            title: 'Expansión con aliados',
+            description:
+              'Desplegar módulos funcionales y operación conjunta en México, EE. UU., Europa y Asia.',
           },
           {
-            highlight: '> 10%',
-            label: 'crecimiento mensual de activos.',
+            title: 'Inteligencia predictiva escalable',
+            description:
+              'Impulsar capacidades de IA e ingresos recurrentes menos dependientes de la venta directa.',
           },
         ],
       },
     ],
     deepDive:
-      'Todas las metas aquí listadas son OKR y objetivos estratégicos propuestos para guiar y evaluar el desempeño con evidencia real, no métricas históricas ya cerradas.',
+      'Las prioridades estratégicas de crecimiento articulan la evolución de experiencia y producto en Latinoamérica, la comercialización consultiva global y el escalamiento B2B2B mediante partners y EXIM sobre el motor común de Datacorp.',
   },
   {
     id: 10,

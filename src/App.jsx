@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from './components/Layout';
 import LoginView from './components/LoginView';
@@ -10,13 +10,19 @@ import Stage4View from './components/Stage4View';
 import { useOnboardingStore } from './store/useOnboardingStore';
 
 export default function App() {
-  const userCode = useOnboardingStore((state) => state.userCode);
+  const activeParticipantId = useOnboardingStore(
+    (state) => state.activeParticipantId
+  );
   const [activeStageId, setActiveStageId] = useState(null);
+
+  useEffect(() => {
+    setActiveStageId(null);
+  }, [activeParticipantId]);
 
   return (
     <Layout>
       <AnimatePresence mode="wait">
-        {!userCode ? (
+        {!activeParticipantId ? (
           <motion.div
             key="login-view"
             initial={{ opacity: 0 }}

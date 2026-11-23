@@ -8,6 +8,20 @@ const PHOTO_MODULES = import.meta.glob(
   { eager: true, import: 'default' }
 );
 
+/**
+ * Exclusiones explícitas por `personId` para personas cuya identidad fotográfica
+ * aún debe verificarse manualmente. Fuerza avatar genérico sin matching automático.
+ */
+export const EXCLUDED_PHOTO_PERSON_IDS = new Set([
+  'person-david-pazan',
+  'person-esteban-huenupil',
+  'person-eluney-moncada',
+]);
+
+export function isPhotoExcludedForPerson(personId) {
+  return typeof personId === 'string' && EXCLUDED_PHOTO_PERSON_IDS.has(personId);
+}
+
 const ACCESSORY_WORDS = new Set([
   'correcto',
   'editadas',
@@ -43,7 +57,7 @@ function tokenizeName(value) {
 }
 
 /**
- * Distancia de Levenshtein para tolerar variantes menores (ej. Eluney/Elueny, Stefania/Steffania, Aspee/Aspe).
+ * Distancia de Levenshtein para tolerar variantes menores (ej. Stefania/Steffania, Aspee/Aspe).
  */
 function levenshtein(a, b) {
   if (a === b) return 0;
@@ -75,14 +89,12 @@ function levenshtein(a, b) {
 function tokensMatch(tokenA, tokenB) {
   if (tokenA === tokenB) return { matched: true, exact: true, distance: 0 };
 
-  // Variantes con transposición simple (ej. eluney <-> elueny) o 1-2 caracteres de diferencia en palabras >= 4 letras
   const maxLen = Math.max(tokenA.length, tokenB.length);
   if (maxLen >= 4) {
     const dist = levenshtein(tokenA, tokenB);
     if (dist <= 1) {
       return { matched: true, exact: false, distance: dist };
     }
-    // Transposición adyacente exacta (ej. eluney / elueny -> dist 2 pero mismos caracteres)
     if (
       dist === 2 &&
       tokenA.length === tokenB.length &&
@@ -120,54 +132,60 @@ const INDEXED_PHOTOS = Object.entries(PHOTO_MODULES).map(([rawPath, url]) => {
 });
 
 /**
- * Construye un mapa { normalizedPersonName -> { url, relativePath } } para todas las personas del organigrama,
- * evitando ambigüedades entre personas que comparten el primer nombre.
+ * Construye un mapa `{ personId -> { url, relativePath } }` para todas las personas del organigrama,
+ * respetando exclusiones explícitas por `personId` y evitando ambigüedades entre primeros nombres.
  */
-export function buildOrgPhotoMap(allPersonNames) {
-  // Contar frecuencia de cada primer nombre dentro del organigrama para detectar ambigüedades
-  const uniquePeople = Array.from(
-    new Set(allPersonNames.map((n) => normalizeText(n)))
-  );
-  const firstNameCounts = {};
-  for (const normName of uniquePeople) {
-    const first = tokenizeName(normName)[0];
-    if (first) {
-      firstNameCounts[first] = (firstNameCounts[first] || 0) + 1;
+export function buildOrgPhotoMap(people) {
+  const uniquePeopleMap = new Map();
+  for (const entry of people || []) {
+    if (!entry || typeof entry.personId !== 'string' || !entry.personId) {
+      continue;
+    }
+    if (!uniquePeopleMap.has(entry.personId)) {
+      const personTokens = tokenizeName(entry.name);
+      uniquePeopleMap.set(entry.personId, {
+        personId: entry.personId,
+        name: entry.name,
+        normPerson: normalizeText(entry.name),
+        tokens: personTokens,
+        firstName: personTokens[0] || '',
+        lastNames: personTokens.slice(1),
+      });
     }
   }
 
+  const uniquePeople = Array.from(uniquePeopleMap.values());
   const photoMap = {};
 
-  for (const personName of allPersonNames) {
-    const normPerson = normalizeText(personName);
-    if (photoMap[normPerson] !== undefined) continue;
+  for (const person of uniquePeople) {
+    const { personId, normPerson, tokens, firstName, lastNames } = person;
 
-    const personTokens = tokenizeName(personName);
-    if (personTokens.length === 0) {
-      photoMap[normPerson] = null;
+    if (isPhotoExcludedForPerson(personId) || tokens.length === 0) {
+      photoMap[personId] = null;
       continue;
     }
 
-    const firstName = personTokens[0];
-    const lastNames = personTokens.slice(1);
-    const isFirstNameUnique = firstNameCounts[firstName] === 1;
+    const conflictingFirstNames = uniquePeople.filter(
+      (other) =>
+        other.personId !== personId &&
+        other.firstName &&
+        tokensMatch(firstName, other.firstName).matched
+    ).length;
+    const isFirstNameUnique = conflictingFirstNames === 0;
 
     const candidates = [];
 
     for (const file of INDEXED_PHOTOS) {
-      // Ignorar archivos genéricos con solo fechas/códigos (ej. 20260219_093256, DSC_3655)
       if (file.tokens.length === 0 || /^\d+$/.test(file.tokens[0])) {
         continue;
       }
 
-      // Buscar coincidencia de primer nombre en los tokens del archivo
       const firstMatch = file.tokens
         .map((ft) => tokensMatch(firstName, ft))
         .find((m) => m.matched);
 
       if (!firstMatch) continue;
 
-      // Buscar coincidencia de apellido(s)
       let matchedLastNameCount = 0;
       let totalDistance = firstMatch.distance;
 
@@ -183,24 +201,14 @@ export function buildOrgPhotoMap(allPersonNames) {
 
       const fileHasExtraNameTokens = file.tokens.length > 1;
 
-      // Regla de seguridad anti-ambigüedad:
-      // - Si el archivo tiene nombre + apellido(s) y NINGÚN apellido coincide con la persona, descartar
-      //   (evita asignar "Ricardo Flores" a "Ricardo Rodriguez", o "Luis Gonzalez" a "Luis Macaya").
       if (fileHasExtraNameTokens && matchedLastNameCount === 0) {
         continue;
       }
 
-      // - Si solo coincide el primer nombre (archivo de 1 solo token), solo permitir si ese primer nombre
-      //   no es ambiguo dentro del organigrama.
       if (matchedLastNameCount === 0 && !isFirstNameUnique) {
         continue;
       }
 
-      // Puntuación según prioridad obligatoria:
-      // 1. Coincidencia nombre + apellido (tier 2) > nombre solo (tier 1)
-      // 2. Carpeta Editadas/
-      // 3. Extensión .webp
-      // 4. Menor distancia / nombre más cercano
       const hasFullNameMatch = matchedLastNameCount > 0;
       const isCorrectoPreferred = /correcto/i.test(file.baseName) ? 1 : 0;
 
@@ -220,11 +228,11 @@ export function buildOrgPhotoMap(allPersonNames) {
     }
 
     if (candidates.length === 0) {
-      photoMap[normPerson] = null;
+      photoMap[personId] = null;
     } else {
       candidates.sort((a, b) => b.score - a.score);
       const best = candidates[0].file;
-      photoMap[normPerson] = {
+      photoMap[personId] = {
         url: best.url,
         relativePath: best.relativePath,
       };
@@ -235,9 +243,110 @@ export function buildOrgPhotoMap(allPersonNames) {
 }
 
 /**
- * Obtiene la URL de foto resuelta para una persona dada desde el mapa precomputado.
+ * Obtiene la URL de foto resuelta para una persona dada desde el mapa indexado por `personId`.
  */
-export function resolvePersonPhoto(photoMap, personName) {
-  const key = normalizeText(personName);
-  return photoMap[key]?.url || null;
+export function resolvePersonPhoto(photoMap, personId) {
+  if (!personId || isPhotoExcludedForPerson(personId)) {
+    return null;
+  }
+  return photoMap?.[personId]?.url || null;
+}
+
+/**
+ * Normaliza texto para búsqueda insensible a tildes, diéresis y mayúsculas.
+ */
+export function normalizeSearchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const BRANCH_DISPLAY_LABELS = {
+  'branch-comercial': 'Comercial',
+  'branch-innovacion': 'Innovación y Desarrollo',
+  'branch-experiencia': 'Experiencia',
+};
+
+/**
+ * Construye una lista plana de todos los puestos del organigrama conservando rama y conteo de cargos por `personId`.
+ */
+export function collectOrgPositions(structure) {
+  if (!structure) return [];
+
+  const rawPositions = [
+    { ...structure.root, branchId: 'root', branchLabel: 'Dirección General' },
+    {
+      ...structure.companyDivisions.left.leader,
+      branchId: 'root',
+      branchLabel: 'Imexdbusiness',
+    },
+    ...structure.companyDivisions.left.team.map((m) => ({
+      ...m,
+      branchId: 'root',
+      branchLabel: 'Imexdbusiness',
+    })),
+    {
+      ...structure.companyDivisions.right.leader,
+      branchId: 'root',
+      branchLabel: 'Datlas BI',
+    },
+    ...structure.companyDivisions.right.team.map((m) => ({
+      ...m,
+      branchId: 'root',
+      branchLabel: 'Datlas BI',
+    })),
+    ...structure.functionalBranches.flatMap((branch) => {
+      const label = BRANCH_DISPLAY_LABELS[branch.id] || branch.id;
+      return [
+        { ...branch.leader, branchId: branch.id, branchLabel: label },
+        ...branch.units.flatMap((unit) => [
+          { ...unit.head, branchId: branch.id, branchLabel: label },
+          ...unit.members.map((member) => ({
+            ...member,
+            branchId: branch.id,
+            branchLabel: label,
+          })),
+        ]),
+      ];
+    }),
+  ];
+
+  const countsByPersonId = {};
+  for (const pos of rawPositions) {
+    countsByPersonId[pos.personId] = (countsByPersonId[pos.personId] || 0) + 1;
+  }
+
+  return rawPositions.map((pos) => ({
+    ...pos,
+    positionCount: countsByPersonId[pos.personId] || 1,
+    normalizedName: normalizeSearchText(pos.name),
+    normalizedRole: normalizeSearchText(pos.role),
+    searchIndex: normalizeSearchText(`${pos.name} ${pos.role}`),
+  }));
+}
+
+/**
+ * Filtra puestos por nombre o cargo de forma insensible a tildes y mayúsculas.
+ */
+export function filterOrgPositions(positions, query) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return [];
+
+  const tokens = normalizedQuery.split(' ').filter(Boolean);
+  const matches = positions.filter((pos) =>
+    tokens.every((token) => pos.searchIndex.includes(token))
+  );
+
+  return matches.sort((a, b) => {
+    const aNameMatch = a.normalizedName.includes(normalizedQuery) ? 0 : 1;
+    const bNameMatch = b.normalizedName.includes(normalizedQuery) ? 0 : 1;
+    if (aNameMatch !== bNameMatch) return aNameMatch - bNameMatch;
+
+    const aStarts = a.normalizedName.startsWith(normalizedQuery) ? 0 : 1;
+    const bStarts = b.normalizedName.startsWith(normalizedQuery) ? 0 : 1;
+    return aStarts - bStarts;
+  });
 }

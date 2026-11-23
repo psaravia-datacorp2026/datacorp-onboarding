@@ -5,8 +5,6 @@ import {
   Minus,
   Globe2,
   Layers,
-  Target,
-  Info,
   MapPin,
   Briefcase,
   Compass,
@@ -28,21 +26,21 @@ export function EcosystemTableLayout({
   cardVariants,
 }) {
   return (
-    <div className="relative flex h-full w-full flex-col justify-between bg-gradient-to-b from-[#F8FAFF] to-[#EAF4FF] px-[6%] py-[5%] text-[#14213D]">
+    <div className="relative flex min-h-full w-full flex-col justify-between bg-gradient-to-b from-[#F8FAFF] to-[#EAF4FF] px-6 py-5 sm:px-8 sm:py-5 lg:px-10 lg:py-6 text-[#14213D]">
       {/* Header */}
-      <div className="max-w-4xl space-y-2">
+      <div className="max-w-4xl space-y-1">
         <motion.div variants={itemVariants}>
           <EditorialEyebrow variant="electric">{slide.eyebrow}</EditorialEyebrow>
         </motion.div>
         <motion.h2
           variants={itemVariants}
-          className="text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold tracking-tight text-[#14294D] leading-[1.1]"
+          className="text-2xl sm:text-3xl lg:text-[2rem] xl:text-[2.35rem] font-extrabold tracking-tight text-[#14294D] leading-[1.1]"
         >
           {slide.title}
         </motion.h2>
         <motion.p
           variants={itemVariants}
-          className="text-sm sm:text-lg text-[#526382]"
+          className="text-xs sm:text-sm lg:text-[15px] leading-snug text-[#526382]"
         >
           {slide.subtitle}
         </motion.p>
@@ -51,7 +49,7 @@ export function EcosystemTableLayout({
       {/* 3 Equal Comparative Company Cards (ref. p.17) */}
       <motion.div
         variants={groupVariants}
-        className="my-auto grid grid-cols-1 gap-5 py-3 lg:grid-cols-3"
+        className="my-auto grid grid-cols-1 gap-4 py-2 lg:grid-cols-3"
       >
         {slide.rows.map((row, idx) => {
           const isMiddle = idx === 1;
@@ -60,14 +58,14 @@ export function EcosystemTableLayout({
               key={row.company}
               variants={cardVariants}
               className={[
-                'flex flex-col justify-between rounded-[22px] p-6 transition-transform duration-200 hover:-translate-y-0.5',
+                'flex flex-col rounded-[22px] p-4 sm:p-5 transition-transform duration-200 hover:-translate-y-0.5',
                 isMiddle
                   ? 'bg-[#14294D] text-white shadow-[0_20px_44px_-12px_rgba(20,41,77,0.35)]'
                   : 'dc-editorial-card text-[#14213D]',
               ].join(' ')}
             >
               {/* Card Header */}
-              <div className="border-b border-current/10 pb-4">
+              <div className="border-b border-current/10 pb-2.5">
                 <span
                   className={[
                     'inline-block rounded-full px-3 py-0.5 text-[11px] font-bold uppercase tracking-wider',
@@ -80,7 +78,7 @@ export function EcosystemTableLayout({
                 </span>
                 <h3
                   className={[
-                    'mt-2.5 text-lg sm:text-xl font-extrabold leading-snug',
+                    'mt-1.5 text-base lg:text-[17px] font-extrabold leading-tight',
                     isMiddle ? 'text-white' : 'text-[#14294D]',
                   ].join(' ')}
                 >
@@ -89,8 +87,8 @@ export function EcosystemTableLayout({
               </div>
 
               {/* 3 Structured Comparative Attributes */}
-              <div className="mt-4 space-y-3.5 text-sm">
-                <div className="flex items-start gap-3">
+              <div className="mt-3 space-y-2.5 text-xs sm:text-[13px]">
+                <div className="flex items-start gap-2.5">
                   <MapPin
                     className={`mt-0.5 h-4 w-4 shrink-0 ${
                       isMiddle ? 'text-[#60A5FA]' : 'text-[#1689F8]'
@@ -98,17 +96,17 @@ export function EcosystemTableLayout({
                   />
                   <div>
                     <span
-                      className={`block text-[11px] font-bold uppercase tracking-wider ${
+                      className={`block text-[10px] font-bold uppercase tracking-wider ${
                         isMiddle ? 'text-[#93C5FD]' : 'text-[#526382]'
                       }`}
                     >
                       {slide.columns[1]}
                     </span>
-                    <span className="font-bold">{row.territory}</span>
+                    <span className="block font-bold leading-snug">{row.territory}</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2.5">
                   <Briefcase
                     className={`mt-0.5 h-4 w-4 shrink-0 ${
                       isMiddle ? 'text-[#60A5FA]' : 'text-[#1689F8]'
@@ -116,17 +114,17 @@ export function EcosystemTableLayout({
                   />
                   <div>
                     <span
-                      className={`block text-[11px] font-bold uppercase tracking-wider ${
+                      className={`block text-[10px] font-bold uppercase tracking-wider ${
                         isMiddle ? 'text-[#93C5FD]' : 'text-[#526382]'
                       }`}
                     >
                       {slide.columns[2]}
                     </span>
-                    <span className="font-bold">{row.model}</span>
+                    <span className="block font-bold leading-snug">{row.model}</span>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2.5">
                   <Compass
                     className={`mt-0.5 h-4 w-4 shrink-0 ${
                       isMiddle ? 'text-[#60A5FA]' : 'text-[#1689F8]'
@@ -134,13 +132,13 @@ export function EcosystemTableLayout({
                   />
                   <div>
                     <span
-                      className={`block text-[11px] font-bold uppercase tracking-wider ${
+                      className={`block text-[10px] font-bold uppercase tracking-wider ${
                         isMiddle ? 'text-[#93C5FD]' : 'text-[#526382]'
                       }`}
                     >
                       {slide.columns[3]}
                     </span>
-                    <span className="font-bold">{row.role}</span>
+                    <span className="block font-bold leading-snug">{row.role}</span>
                   </div>
                 </div>
               </div>
@@ -152,7 +150,7 @@ export function EcosystemTableLayout({
       {/* Bottom Key Idea Bar */}
       <motion.div
         variants={itemVariants}
-        className="dc-glass-light rounded-2xl px-6 py-3.5 text-sm sm:text-base text-[#14294D]"
+        className="dc-glass-light rounded-xl px-4 py-2.5 text-xs sm:text-[13px] leading-snug text-[#14294D]"
       >
         <p>
           <strong className="font-extrabold text-[#1689F8]">Idea clave:</strong>{' '}
@@ -474,8 +472,8 @@ export function DatlasHorizonLayout({
 }
 
 /**
- * SLIDE 09 — «Ambiciones concretas por empresa»
- * Huge editorial KPI numbers on clean light canvas with explicit META labels (ref. p.11 & p.18).
+ * SLIDE 09 — «Prioridades estratégicas de crecimiento»
+ * Three qualitative editorial columns aligned by company without unvalidated numeric KPIs.
  */
 export function OkrAmbitionsLayout({
   slide,
@@ -484,67 +482,63 @@ export function OkrAmbitionsLayout({
   cardVariants,
 }) {
   return (
-    <div className="relative flex h-full w-full flex-col justify-between bg-[#FFFFFF] dc-slide-dots-light px-[6%] py-[5%] text-[#14213D]">
-      {/* Header + Explicit META Disclaimer */}
-      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
-        <div className="space-y-2">
-          <motion.div variants={itemVariants}>
-            <EditorialEyebrow variant="pastel">{slide.eyebrow}</EditorialEyebrow>
-          </motion.div>
-          <motion.h2
-            variants={itemVariants}
-            className="text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold tracking-tight text-[#14294D] leading-[1.1]"
-          >
-            {slide.title}
-          </motion.h2>
-        </div>
-
-        <motion.div
-          variants={itemVariants}
-          className="inline-flex items-center gap-2.5 rounded-2xl border border-[#1689F8]/25 bg-[#EAF4FF] px-4 py-2.5 text-xs sm:text-sm font-bold text-[#14294D]"
-        >
-          <Info className="h-4 w-4 shrink-0 text-[#1689F8]" />
-          <span>{slide.disclaimer}</span>
+    <div className="relative flex min-h-full w-full flex-col justify-between bg-[#FFFFFF] dc-slide-dots-light px-6 py-4 sm:px-8 sm:py-5 lg:px-9 lg:py-5 text-[#14213D]">
+      {/* Header */}
+      <div className="max-w-4xl space-y-1">
+        <motion.div variants={itemVariants}>
+          <EditorialEyebrow variant="pastel">{slide.eyebrow}</EditorialEyebrow>
         </motion.div>
+        <motion.h2
+          variants={itemVariants}
+          className="text-2xl sm:text-3xl lg:text-[1.85rem] xl:text-[2.25rem] font-extrabold tracking-tight text-[#14294D] leading-[1.1]"
+        >
+          {slide.title}
+        </motion.h2>
+        {slide.subtitle && (
+          <motion.p
+            variants={itemVariants}
+            className="text-xs sm:text-sm lg:text-[15px] leading-snug text-[#526382]"
+          >
+            {slide.subtitle}
+          </motion.p>
+        )}
       </div>
 
-      {/* 3 Columns with Large Display KPIs (ref. p.11) */}
+      {/* 3 Qualitative Priority Columns */}
       <motion.div
         variants={groupVariants}
-        className="my-auto grid grid-cols-1 gap-6 pt-4 lg:grid-cols-3"
+        className="my-auto grid grid-cols-1 gap-4 pt-2 lg:grid-cols-3"
       >
         {slide.groups.map((group) => (
           <motion.div
             key={group.company}
             variants={cardVariants}
-            className="dc-editorial-card flex flex-col justify-between rounded-[24px] p-6 sm:p-7"
+            className="dc-editorial-card flex flex-col rounded-[22px] p-4"
           >
-            <div>
-              <div className="flex items-center justify-between border-b border-[#14294D]/8 pb-4">
-                <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-[#14294D]">
-                  {group.company}
-                </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF4FF] px-3 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-[#1689F8]">
-                  <Target className="h-3 w-3" />
-                  META OKR
-                </span>
-              </div>
+            <div className="flex flex-col gap-1 border-b border-[#14294D]/8 pb-2">
+              <span className="text-xs sm:text-[13px] font-extrabold uppercase tracking-wider text-[#14294D]">
+                {group.company}
+              </span>
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-[#EAF4FF] px-2.5 py-0.5 text-[10px] font-extrabold text-[#1689F8]">
+                <Compass className="h-3 w-3 shrink-0" />
+                {group.focus}
+              </span>
+            </div>
 
-              <div className="mt-5 space-y-4">
-                {group.metrics.map((m, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl bg-[#F8FAFF] px-4 py-3 border border-[#14294D]/5"
-                  >
-                    <div className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1689F8]">
-                      {m.highlight}
-                    </div>
-                    <div className="mt-0.5 text-sm sm:text-base font-medium text-[#14213D]">
-                      {m.label}
-                    </div>
+            <div className="mt-2.5 space-y-1.5">
+              {group.priorities.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-xl border border-[#14294D]/6 bg-[#F8FAFF] px-3 py-2"
+                >
+                  <div className="text-xs sm:text-[13px] font-extrabold leading-tight text-[#14294D]">
+                    {item.title}
                   </div>
-                ))}
-              </div>
+                  <p className="mt-0.5 text-[11px] sm:text-xs leading-snug text-[#526382]">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
             </div>
           </motion.div>
         ))}

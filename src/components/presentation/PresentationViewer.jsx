@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -14,6 +15,45 @@ import {
 } from 'lucide-react';
 import SlideRenderer from './SlideRenderer';
 
+const PAGE_VARIANTS = {
+  enter: (dir) => ({
+    x: dir > 0 ? '100%' : '-100%',
+    opacity: 1,
+    zIndex: 2,
+  }),
+  center: {
+    x: '0%',
+    opacity: 1,
+    zIndex: 2,
+    transition: {
+      x: { duration: 0.36, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.2 },
+    },
+  },
+  exit: (dir) => ({
+    x: dir > 0 ? '-100%' : '100%',
+    opacity: 1,
+    zIndex: 1,
+    pointerEvents: 'none',
+    transition: {
+      x: { duration: 0.36, ease: [0.22, 1, 0.36, 1] },
+      opacity: { duration: 0.2 },
+    },
+  }),
+};
+
+const REDUCED_PAGE_VARIANTS = {
+  enter: { opacity: 0, x: '0%', zIndex: 2 },
+  center: { opacity: 1, x: '0%', zIndex: 2, transition: { duration: 0.14 } },
+  exit: {
+    opacity: 0,
+    x: '0%',
+    zIndex: 1,
+    pointerEvents: 'none',
+    transition: { duration: 0.12 },
+  },
+};
+
 export default function PresentationViewer({
   slides,
   currentSlideIndex,
@@ -22,14 +62,31 @@ export default function PresentationViewer({
   onBackToPath,
   onFinishStage,
 }) {
-  const [direction, setDirection] = useState(1);
+  const prefersReducedMotion = useReducedMotion();
+  const [navMeta, setNavMeta] = useState(() => ({
+    index: currentSlideIndex,
+    direction: 1,
+    seq: 0,
+  }));
+
+  if (navMeta.index !== currentSlideIndex) {
+    setNavMeta({
+      index: currentSlideIndex,
+      direction: currentSlideIndex > navMeta.index ? 1 : -1,
+      seq: navMeta.seq + 1,
+    });
+  }
+
+  const direction = navMeta.direction;
   const [isIndexOpen, setIsIndexOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const viewerContainerRef = useRef(null);
-  const touchStartXRef = useRef(null);
+  const wasNativeFsRef = useRef(false);
+  const touchStartRef = useRef(null);
 
   const totalSlides = slides.length; // 20
   const activeSlide = slides[currentSlideIndex] || slides[0];
+  const slideRenderKey = `${activeSlide.id}-${navMeta.seq}`;
   const visitedCount = visitedSlideIds.length;
   const allSlidesVisited = visitedCount >= totalSlides;
   const visitedPercent = Math.round((visitedCount / totalSlides) * 100);
@@ -39,7 +96,6 @@ export default function PresentationViewer({
       if (nextIndex < 0 || nextIndex >= totalSlides || nextIndex === currentSlideIndex) {
         return;
       }
-      setDirection(nextIndex > currentSlideIndex ? 1 : -1);
       onSelectSlideIndex(nextIndex);
     },
     [currentSlideIndex, totalSlides, onSelectSlideIndex]
@@ -66,34 +122,49 @@ export default function PresentationViewer({
     }
   }, [slides, visitedSlideIds, goToSlide]);
 
-  // Fullscreen toggle with native API + fallback state
-  const toggleFullscreen = useCallback(async () => {
-    const elem = viewerContainerRef.current;
-    if (!elem) return;
-
-    try {
-      if (!document.fullscreenElement) {
-        if (elem.requestFullscreen) {
-          await elem.requestFullscreen();
-        }
-        setIsFullscreen(true);
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        }
-        setIsFullscreen(false);
+  // Fullscreen toggle with synchronous CSS overlay + non-blocking native Fullscreen API
+  const toggleFullscreen = useCallback(() => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      if (
+        document.fullscreenEnabled &&
+        !document.fullscreenElement &&
+        typeof document.documentElement?.requestFullscreen === 'function'
+      ) {
+        document.documentElement.requestFullscreen().catch(() => {});
       }
-    } catch {
-      setIsFullscreen((prev) => !prev);
+    } else {
+      setIsFullscreen(false);
+      if (
+        document.fullscreenElement &&
+        typeof document.exitFullscreen === 'function'
+      ) {
+        document.exitFullscreen().catch(() => {});
+      }
     }
-  }, []);
+  }, [isFullscreen]);
 
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const nativeActive = Boolean(document.fullscreenElement);
+      if (nativeActive) {
+        wasNativeFsRef.current = true;
+        setIsFullscreen(true);
+      } else if (wasNativeFsRef.current) {
+        wasNativeFsRef.current = false;
+        setIsFullscreen(false);
+      }
     };
     document.addEventListener('fullscreenchange', handleFsChange);
-    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      if (
+        document.fullscreenElement &&
+        typeof document.exitFullscreen === 'function'
+      ) {
+        document.exitFullscreen().catch(() => {});
+      }
+    };
   }, []);
 
   // Keyboard navigation (ArrowRight, ArrowLeft, Home, End, Escape)
@@ -138,29 +209,41 @@ export default function PresentationViewer({
 
   // Touch swipe handlers
   const handleTouchStart = (e) => {
-    touchStartXRef.current = e.touches[0]?.clientX ?? null;
+    if (isIndexOpen) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
   const handleTouchEnd = (e) => {
-    if (touchStartXRef.current === null) return;
-    const deltaX = (e.changedTouches[0]?.clientX ?? 0) - touchStartXRef.current;
-    if (Math.abs(deltaX) > 55) {
+    if (isIndexOpen || !touchStartRef.current) {
+      touchStartRef.current = null;
+      return;
+    }
+    const touch = e.changedTouches[0];
+    if (!touch) {
+      touchStartRef.current = null;
+      return;
+    }
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX < 0) handleNext();
       else handlePrev();
     }
-    touchStartXRef.current = null;
+    touchStartRef.current = null;
   };
 
-  return (
+  const viewerContent = (
     <div
       ref={viewerContainerRef}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       className={[
-        'relative flex flex-col justify-between px-3 py-2 sm:px-5 sm:py-2.5 transition-all',
+        'flex flex-col justify-between px-3 py-2 sm:px-5 sm:py-2.5 transition-all',
         isFullscreen
-          ? 'fixed inset-0 z-50 h-dvh w-screen overflow-hidden bg-[#0B1326]'
-          : 'h-[calc(100dvh-4rem)] w-full overflow-hidden',
+          ? 'fixed inset-0 z-[100] h-dvh w-screen overflow-hidden bg-[#0B1326]'
+          : 'relative h-[calc(100dvh-4rem)] w-full overflow-hidden',
       ].join(' ')}
     >
       {/* 1. HEADER BAND: Controlled compact height */}
@@ -203,7 +286,7 @@ export default function PresentationViewer({
           </span>
         </div>
 
-        {/* Right Control: Fullscreen only (Profundizar removed) */}
+        {/* Right Control: Fullscreen only */}
         <div className="flex items-center">
           <button
             type="button"
@@ -226,23 +309,36 @@ export default function PresentationViewer({
         </div>
       </div>
 
-      {/* 2. FLEXIBLE SLIDE AREA: 16:9 stage fitted to available vertical and horizontal space */}
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 items-center justify-center py-1.5">
-        <div className="relative flex h-full max-h-full w-full items-center justify-center">
-          <div className="relative h-full w-full lg:aspect-video lg:h-full lg:w-auto lg:max-w-full">
-            <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+      {/* 2. FLEXIBLE SLIDE AREA: Non-collapsing 16:9 stage fitted via container query units */}
+      <div
+        className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 items-center justify-center py-1.5"
+        style={{ containerType: 'size' }}
+      >
+        <div
+          data-testid="presentation-stage"
+          className="relative h-full w-full overflow-hidden rounded-[22px] bg-[#0F1B35] shadow-[0_20px_60px_-15px_rgba(7,14,30,0.65)] ring-1 ring-white/10 lg:w-[min(100cqw,177.7778cqh)] lg:h-[min(100cqh,56.25cqw)]"
+        >
+          <AnimatePresence initial={false} custom={direction}>
+            <motion.article
+              key={slideRenderKey}
+              custom={direction}
+              variants={prefersReducedMotion ? REDUCED_PAGE_VARIANTS : PAGE_VARIANTS}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              aria-label={`Diapositiva ${activeSlide.id} de ${totalSlides}: ${activeSlide.title}`}
+              className="absolute inset-0 h-full w-full overflow-y-auto overflow-x-hidden dc-custom-scroll will-change-transform"
+            >
               <SlideRenderer
-                key={activeSlide.id}
                 slide={activeSlide}
-                direction={direction}
                 allSlidesVisited={allSlidesVisited}
                 visitedCount={visitedCount}
                 totalSlides={totalSlides}
                 onJumpToFirstMissing={handleJumpToFirstMissing}
                 onFinishStage={onFinishStage}
               />
-            </AnimatePresence>
-          </div>
+            </motion.article>
+          </AnimatePresence>
         </div>
       </div>
 
@@ -427,4 +523,8 @@ export default function PresentationViewer({
       </AnimatePresence>
     </div>
   );
+
+  return isFullscreen && typeof document !== 'undefined'
+    ? createPortal(viewerContent, document.body)
+    : viewerContent;
 }

@@ -6,11 +6,11 @@ import {
   Trophy,
 } from 'lucide-react';
 
-export const VALID_CODES = {
-  DEV2026: 'Desarrollo',
-  COM2026: 'Comercial',
-  DAT2026: 'Datos',
-};
+export const SHARED_ACCESS_CODE = 'DATACORP2026';
+
+export function isValidAccessCode(code) {
+  return String(code || '').trim().toUpperCase() === SHARED_ACCESS_CODE;
+}
 
 /**
  * 4 Playable Onboarding Stages + Final Graduation Trophy Node (ID: 5).
@@ -568,5 +568,9 @@ export const FINAL_CHECKLIST_ITEMS = [
   {
     id: 'office-access-card',
     label: 'Tarjeta de acceso a la oficina',
+  },
+  {
+    id: 'corporate-backpack',
+    label: 'Entrega de mochila corporativa',
   },
 ];
