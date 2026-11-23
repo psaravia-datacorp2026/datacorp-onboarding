@@ -9,14 +9,47 @@ const PHOTO_MODULES = import.meta.glob(
 );
 
 /**
- * Exclusiones explícitas por `personId` para personas cuya identidad fotográfica
- * aún debe verificarse manualmente. Fuerza avatar genérico sin matching automático.
+ * Mapeo explícito y prioritario por `personId` para las 14 fotografías WebP actualizadas.
+ * Si el archivo manual no existiera en el bundle, devuelve `null` (avatar genérico) sin caer en fotos antiguas.
  */
-export const EXCLUDED_PHOTO_PERSON_IDS = new Set([
-  'person-david-pazan',
-  'person-esteban-huenupil',
-  'person-eluney-moncada',
-]);
+export const MANUAL_PHOTO_PATHS = {
+  'person-angela-chavez':
+    'src/assets/organigrama-fotos/Comercial/angela-chavez-actualizada.webp',
+  'person-armando-villanueva':
+    'src/assets/organigrama-fotos/Comercial/armando-villanueva-actualizada.webp',
+  'person-claudia-santana':
+    'src/assets/organigrama-fotos/Comercial/claudia-santana-actualizada.webp',
+  'person-dante-aspee':
+    'src/assets/organigrama-fotos/Inteligencia/dante-aspee-actualizada.webp',
+  'person-david-pazan':
+    'src/assets/organigrama-fotos/Desarrollo/david-pazan-actualizada.webp',
+  'person-eluney-moncada':
+    'src/assets/organigrama-fotos/Comercial/eluney-moncada-actualizada.webp',
+  'person-esteban-huenupil':
+    'src/assets/organigrama-fotos/Desarrollo/esteban-huenupil-actualizada.webp',
+  'person-francisco-morales':
+    'src/assets/organigrama-fotos/Comercial/francisco-morales-actualizada.webp',
+  'person-francisco-toro':
+    'src/assets/organigrama-fotos/Comercial/francisco-toro-actualizada.webp',
+  'person-ignacio-valdivia':
+    'src/assets/organigrama-fotos/Comercial/ignacio-valdivia-actualizada.webp',
+  'person-jose-mirabal':
+    'src/assets/organigrama-fotos/Desarrollo/jose-mirabal-actualizada.webp',
+  'person-josefa-gonzalez':
+    'src/assets/organigrama-fotos/Comercial/josefa-gonzalez-actualizada.webp',
+  'person-lina-villegas':
+    'src/assets/organigrama-fotos/Clientes/lina-villegas-actualizada.webp',
+  'person-renato-andrades':
+    'src/assets/organigrama-fotos/Comercial/renato-andrades-actualizada.webp',
+};
+
+const MANUAL_PHOTO_PATH_SET = new Set(Object.values(MANUAL_PHOTO_PATHS));
+
+/**
+ * Exclusiones explícitas por `personId` sin fotografía verificada.
+ * David Pazan, Esteban Huenupil y Eluney Moncada usan exclusivamente su ruta en `MANUAL_PHOTO_PATHS`.
+ */
+export const EXCLUDED_PHOTO_PERSON_IDS = new Set([]);
 
 export function isPhotoExcludedForPerson(personId) {
   return typeof personId === 'string' && EXCLUDED_PHOTO_PERSON_IDS.has(personId);
@@ -131,9 +164,13 @@ const INDEXED_PHOTOS = Object.entries(PHOTO_MODULES).map(([rawPath, url]) => {
   };
 });
 
+const PHOTOS_BY_RELATIVE_PATH = new Map(
+  INDEXED_PHOTOS.map((file) => [file.relativePath, file])
+);
+
 /**
  * Construye un mapa `{ personId -> { url, relativePath } }` para todas las personas del organigrama,
- * respetando exclusiones explícitas por `personId` y evitando ambigüedades entre primeros nombres.
+ * priorizando `MANUAL_PHOTO_PATHS` por `personId` y respetando exclusiones explícitas.
  */
 export function buildOrgPhotoMap(people) {
   const uniquePeopleMap = new Map();
@@ -160,7 +197,24 @@ export function buildOrgPhotoMap(people) {
   for (const person of uniquePeople) {
     const { personId, normPerson, tokens, firstName, lastNames } = person;
 
-    if (isPhotoExcludedForPerson(personId) || tokens.length === 0) {
+    if (isPhotoExcludedForPerson(personId)) {
+      photoMap[personId] = null;
+      continue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(MANUAL_PHOTO_PATHS, personId)) {
+      const manualPath = MANUAL_PHOTO_PATHS[personId];
+      const manualFile = PHOTOS_BY_RELATIVE_PATH.get(manualPath);
+      photoMap[personId] = manualFile
+        ? {
+            url: manualFile.url,
+            relativePath: manualFile.relativePath,
+          }
+        : null;
+      continue;
+    }
+
+    if (tokens.length === 0) {
       photoMap[personId] = null;
       continue;
     }
@@ -176,6 +230,9 @@ export function buildOrgPhotoMap(people) {
     const candidates = [];
 
     for (const file of INDEXED_PHOTOS) {
+      if (MANUAL_PHOTO_PATH_SET.has(file.relativePath)) {
+        continue;
+      }
       if (file.tokens.length === 0 || /^\d+$/.test(file.tokens[0])) {
         continue;
       }

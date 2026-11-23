@@ -18,7 +18,6 @@ import { useOnboardingStore } from '../store/useOnboardingStore';
 import {
   buildOrgPhotoMap,
   resolvePersonPhoto,
-  isPhotoExcludedForPerson,
   collectOrgPositions,
   filterOrgPositions,
 } from '../utils/orgChartPhotos';
@@ -48,7 +47,7 @@ function NeutralPhotoPlaceholder({ photoUrl, name, tier, isHighlighted }) {
     tier === 'company-ceo' ||
     tier === 'functional-director';
 
-  const sizeClasses = isExecutive ? 'h-11 w-11' : 'h-9 w-9';
+  const sizeClasses = isExecutive ? 'w-[70px] h-[88px]' : 'w-[62px] h-[78px]';
 
   if (photoUrl && !hasLoadError) {
     return (
@@ -57,14 +56,15 @@ function NeutralPhotoPlaceholder({ photoUrl, name, tier, isHighlighted }) {
         alt={name}
         loading="lazy"
         onError={() => setHasLoadError(true)}
+        style={{ objectPosition: 'center 25%' }}
         className={[
           sizeClasses,
-          'shrink-0 rounded-full border object-cover object-top transition-all duration-200',
+          'shrink-0 rounded-xl border object-cover transition-all duration-200',
           isHighlighted
-            ? 'border-[#60A5FA] shadow-[0_0_16px_rgba(22,137,248,0.45)]'
+            ? 'border-[#60A5FA] ring-1 ring-[#60A5FA]/45 shadow-[0_0_16px_rgba(22,137,248,0.45)]'
             : isExecutive
-            ? 'border-[#60A5FA]/50'
-            : 'border-white/25',
+            ? 'border-[#60A5FA]/55 shadow-[0_6px_14px_rgba(2,6,23,0.5)] group-hover:border-[#60A5FA]'
+            : 'border-white/25 shadow-[0_4px_12px_rgba(2,6,23,0.45)] group-hover:border-[#60A5FA]/75',
         ].join(' ')}
       />
     );
@@ -75,15 +75,15 @@ function NeutralPhotoPlaceholder({ photoUrl, name, tier, isHighlighted }) {
       aria-hidden="true"
       className={[
         sizeClasses,
-        'relative flex shrink-0 items-center justify-center rounded-full border transition-all duration-200',
+        'relative flex shrink-0 items-center justify-center rounded-xl border transition-all duration-200',
         isHighlighted
           ? 'border-[#60A5FA] bg-[#1689F8]/30 text-white shadow-[0_0_16px_rgba(22,137,248,0.45)]'
           : isExecutive
-          ? 'border-[#60A5FA]/45 bg-gradient-to-br from-[#1689F8]/30 to-[#14294D] text-[#93C5FD]'
-          : 'border-white/15 bg-slate-800/90 text-slate-400',
+          ? 'border-[#60A5FA]/45 bg-gradient-to-br from-[#1689F8]/30 to-[#14294D] text-[#93C5FD] group-hover:border-[#60A5FA]'
+          : 'border-white/15 bg-slate-800/90 text-slate-400 group-hover:border-[#60A5FA]/60',
       ].join(' ')}
     >
-      <User className={isExecutive ? 'h-5 w-5' : 'h-4 w-4'} />
+      <User className={isExecutive ? 'h-7 w-7' : 'h-6 w-6'} />
     </div>
   );
 }
@@ -104,9 +104,7 @@ function OrgPositionCard({
   onHoverEnd,
 }) {
   const { id, personId, parentId, name, role, tier, photoUrl } = position;
-  const resolvedPhotoUrl = isPhotoExcludedForPerson(personId)
-    ? null
-    : photoUrl || resolvePersonPhoto(photoMap, personId);
+  const resolvedPhotoUrl = photoUrl || resolvePersonPhoto(photoMap, personId);
   const isSelfHovered = hoveredId === id;
   const isParentOfHovered = hoveredParentId === id;
   const isSearchFocused = focusedPositionId === id;
@@ -140,7 +138,7 @@ function OrgPositionCard({
       whileHover={{ y: -4 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
       className={[
-        'group relative flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-left select-none cursor-default transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1689F8]',
+        'group relative flex items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left select-none cursor-default transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1689F8]',
         tierStyles[tier] || tierStyles.member,
         isSelfHovered &&
           'border-[#60A5FA] shadow-[0_16px_36px_rgba(22,137,248,0.32)]',
