@@ -9,7 +9,7 @@ const PHOTO_MODULES = import.meta.glob(
 );
 
 /**
- * Mapeo explícito y prioritario por `personId` para las 14 fotografías WebP actualizadas.
+ * Mapeo explícito y prioritario por `personId` para las 16 fotografías WebP actualizadas.
  * Si el archivo manual no existiera en el bundle, devuelve `null` (avatar genérico) sin caer en fotos antiguas.
  */
 export const MANUAL_PHOTO_PATHS = {
@@ -17,12 +17,16 @@ export const MANUAL_PHOTO_PATHS = {
     'src/assets/organigrama-fotos/Comercial/angela-chavez-actualizada.webp',
   'person-armando-villanueva':
     'src/assets/organigrama-fotos/Comercial/armando-villanueva-actualizada.webp',
+  'person-camila-vera':
+    'src/assets/organigrama-fotos/Desarrollo/camila-vera-actualizada.webp',
   'person-claudia-santana':
     'src/assets/organigrama-fotos/Comercial/claudia-santana-actualizada.webp',
   'person-dante-aspee':
     'src/assets/organigrama-fotos/Inteligencia/dante-aspee-actualizada.webp',
   'person-david-pazan':
     'src/assets/organigrama-fotos/Desarrollo/david-pazan-actualizada.webp',
+  'person-eduardo-henriquez':
+    'src/assets/organigrama-fotos/Desarrollo/eduardo-henriques-actualizada.webp',
   'person-eluney-moncada':
     'src/assets/organigrama-fotos/Comercial/eluney-moncada-actualizada.webp',
   'person-esteban-huenupil':
@@ -165,8 +169,25 @@ const INDEXED_PHOTOS = Object.entries(PHOTO_MODULES).map(([rawPath, url]) => {
 });
 
 const PHOTOS_BY_RELATIVE_PATH = new Map(
-  INDEXED_PHOTOS.map((file) => [file.relativePath, file])
+  INDEXED_PHOTOS.map((file) => [file.relativePath.toLowerCase(), file])
 );
+
+function resolveManualPhotoEntry(personId) {
+  if (!personId || !Object.prototype.hasOwnProperty.call(MANUAL_PHOTO_PATHS, personId)) {
+    return null;
+  }
+  const manualPath = MANUAL_PHOTO_PATHS[personId];
+  const indexed = PHOTOS_BY_RELATIVE_PATH.get(manualPath.toLowerCase());
+  if (indexed) {
+    return {
+      url: indexed.url,
+      relativePath: indexed.relativePath,
+    };
+  }
+  const globKey = manualPath.replace(/^src\/assets\//, '../assets/');
+  const directUrl = PHOTO_MODULES[globKey];
+  return directUrl ? { url: directUrl, relativePath: manualPath } : null;
+}
 
 /**
  * Construye un mapa `{ personId -> { url, relativePath } }` para todas las personas del organigrama,
@@ -203,14 +224,7 @@ export function buildOrgPhotoMap(people) {
     }
 
     if (Object.prototype.hasOwnProperty.call(MANUAL_PHOTO_PATHS, personId)) {
-      const manualPath = MANUAL_PHOTO_PATHS[personId];
-      const manualFile = PHOTOS_BY_RELATIVE_PATH.get(manualPath);
-      photoMap[personId] = manualFile
-        ? {
-            url: manualFile.url,
-            relativePath: manualFile.relativePath,
-          }
-        : null;
+      photoMap[personId] = resolveManualPhotoEntry(personId);
       continue;
     }
 
@@ -306,7 +320,7 @@ export function resolvePersonPhoto(photoMap, personId) {
   if (!personId || isPhotoExcludedForPerson(personId)) {
     return null;
   }
-  return photoMap?.[personId]?.url || null;
+  return photoMap?.[personId]?.url || resolveManualPhotoEntry(personId)?.url || null;
 }
 
 /**
